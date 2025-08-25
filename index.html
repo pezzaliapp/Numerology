@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Numerology — Calcolatore Pitagorico</title>
-  <meta name="description" content="App semplice per calcolare numerologia pitagorica: percorso di vita, espressione, anima, personalità, anno personale e matrice 3×3.">
+  <meta name="description" content="App per numerologia pitagorica: percorso di vita, espressione, anima, personalità, anno personale, matrice 3×3 e interpretazione estesa.">
   <style>
     :root{
       --bg:#0f1115; --card:#151823; --ink:#eaeefb; --muted:#9aa3b2; --acc:#7aa2ff; --line:#222738; --ok:#2ecc71; --warn:#f39c12;
@@ -46,10 +46,17 @@
     .legend{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:12px;color:var(--muted)}
     .section h3{margin:16px 0 8px;font-size:16px}
     footer{margin:24px 0 8px;color:var(--muted);font-size:12px}
-    .success{color:var(--ok)}
-    .warn{color:var(--warn)}
     .hr{height:1px;background:var(--line);margin:14px 0}
     .pre{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:#0f131b;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px}
+    .rich p{margin:.4rem 0}
+    .rich .lead{font-weight:600}
+    .twocol{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:900px){ .twocol{grid-template-columns:1fr 1fr} }
+    @media print{
+      header{position:static;background:transparent;border:none}
+      .wrap{padding:0}
+      .card{page-break-inside:avoid}
+    }
   </style>
 </head>
 <body>
@@ -57,7 +64,7 @@
     <header>
       <div>
         <h1>Numerology — Calcolatore Pitagorico</h1>
-        <div class="sub">Inserisci nome e data di nascita. L'app calcola: Percorso di Vita, Espressione, Anima, Personalità, Matrice 3×3, Anno Personale.</div>
+        <div class="sub">Inserisci nome e data di nascita. L'app calcola: Percorso di Vita, Espressione, Anima, Personalità, Matrice 3×3, Anno Personale e una <b>interpretazione estesa</b>.</div>
       </div>
     </header>
 
@@ -112,9 +119,7 @@
 
     <section class="card section">
       <h3>Matrice Pitagorica (Quadrato 3×3)</h3>
-      <div class="matrix" id="matrix">
-        <!-- 9 celle -->
-      </div>
+      <div class="matrix" id="matrix"></div>
       <div class="legend">
         <div>1–2–3: Mente</div>
         <div>4–5–6: Lavoro/Praticità</div>
@@ -126,8 +131,8 @@
     </section>
 
     <section class="card section">
-      <h3>Interpretazione Breve</h3>
-      <div id="reading" class="pre">Inserisci i dati e premi “Calcola”.</div>
+      <h3>Interpretazione Estesa</h3>
+      <div id="readingRich" class="rich">Inserisci i dati e premi “Calcola”.</div>
     </section>
 
     <footer>
@@ -137,10 +142,21 @@
 
 <script>
 (function(){
+  const meanings = {
+    1:"inizio, indipendenza, volontà, leadership",
+    2:"cooperazione, diplomazia, sensibilità, ascolto",
+    3:"creatività, comunicazione, espressione, gioia",
+    4:"ordine, metodo, lavoro, concretezza",
+    5:"libertà, versatilità, cambiamento, viaggio",
+    6:"responsabilità, famiglia, cura, estetica",
+    7:"ricerca, introspezione, studio, spiritualità interiore",
+    8:"potere, gestione, denaro, autorevolezza",
+    9:"umanità, empatia universale, compassione, ispirazione"
+  };
+
   const mapChar = (ch)=>{
     const c = ch.toUpperCase();
     if(c < 'A' || c > 'Z') return null;
-    // A=1...I=9, J=1...R=9, S=1...Z=8
     const code = c.charCodeAt(0) - 64; // A=1
     return ((code - 1) % 9) + 1;
   };
@@ -150,12 +166,9 @@
     return v.indexOf(ch.toUpperCase()) !== -1;
   };
 
-  const sumDigits = (n)=>{
-    return n.toString().split("").reduce((a,b)=> a + (parseInt(b)||0), 0);
-  };
+  const sumDigits = (n)=> n.toString().split("").reduce((a,b)=> a + (parseInt(b)||0), 0);
 
   const reduceNumber = (n, keepMasters)=>{
-    // Reduce to 1-9, preserving 11/22/33 if keepMasters
     const masters = new Set([11,22,33]);
     let x = n;
     while(x > 9){
@@ -165,20 +178,9 @@
     return x;
   };
 
-  const textReduceDigits = (digits, keepMasters)=>{
-    const total = digits.reduce((a,b)=>a+b,0);
-    const reduced = reduceNumber(total, keepMasters);
-    return {total, reduced};
-  };
-
-  const parseDateDigits = (value)=>{
-    // returns array of digits of YYYY-MM-DD without zeros? We'll keep zeros then ignore for matrix later.
-    const ds = value.replaceAll("-","").split("").map(d => parseInt(d)||0);
-    return ds;
-  };
+  const parseDateDigits = (value)=> value.replaceAll("-","").split("").map(d => parseInt(d)||0);
 
   const countsToMatrix = (digits)=>{
-    // count 1..9 (ignore zeros)
     const cnt = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0};
     digits.forEach(d=>{ if(d>=1 && d<=9) cnt[d]++; });
     return cnt;
@@ -187,91 +189,156 @@
   const renderMatrix = (cnt)=>{
     const cont = document.getElementById("matrix");
     cont.innerHTML = "";
-    const order = [1,2,3,4,5,6,7,8,9];
-    order.forEach(d=>{
+    [1,2,3,4,5,6,7,8,9].forEach(d=>{
       const el = document.createElement("div");
       el.className = "cell";
-      el.innerHTML = `<div class="digit"> ${d} </div><div class="count">${cnt[d]||0}</div>`;
+      el.innerHTML = `<div class="digit">${d}</div><div class="count">${cnt[d]||0}</div>`;
       cont.appendChild(el);
     });
   };
 
-  const describe = (vals)=>{
-    const {lifePath, expression, soul, personality, personalYear, birthYearEssence, matrix} = vals;
-    const lines = [];
-    lines.push(`• Percorso di Vita: ${lifePath} — creatività/comunicazione (3), leadership/inizio (1), cooperazione (2), lavoro/praticità (4–6), spiritualità (9), ecc. L'interpretazione dipende dal numero: vedi sintesi sotto.`);
-    lines.push(`• Espressione (Nome): ${expression}.`);
-    lines.push(`• Anima (Vocali): ${soul}. Desiderio interiore.`);
-    lines.push(`• Personalità (Consonanti): ${personality}. Immagine esterna.`);
-    lines.push(`• Anno Personale: ${personalYear}.`);
-    lines.push(`• Essenza anno di nascita: ${birthYearEssence}.`);
-    lines.push("");
-    // Matrix brief
-    const missing = Object.keys(matrix).filter(k => matrix[k]===0).map(Number);
+  const numberBlurb = (n)=>{
+    const key = reduceNumber(n,false);
+    return meanings[key] ? `${key} → ${meanings[key]}` : `${n}`;
+  };
+
+  const buildRichReading = (vals)=>{
+    const {
+      name, dateVal, keepMasters, yAsVowel,
+      lifePath, expression, soul, personality, personalYear, birthYearEssence,
+      day, month, year, matrix
+    } = vals;
+
     const strong = Object.keys(matrix).filter(k => matrix[k]>=2).map(Number);
-    lines.push(`Matrice 3×3 — presenti forti (≥2): ${strong.length? strong.join(", "):"nessuno"}; mancanti: ${missing.length? missing.join(", "):"nessuno"}.`);
-    lines.push("");
-    lines.push("Nota: questa è una lettura breve. Per un'analisi estesa, usa la stampa/PDF.");
-    return lines.join("\n");
+    const missing = Object.keys(matrix).filter(k => matrix[k]==0).map(Number);
+
+    const lineMent = [1,2,3].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
+    const lineWork = [4,5,6].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
+    const lineSpir = [7,8,9].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
+    const colWill  = [1,4,7].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
+    const colEmo   = [2,5,8].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
+    const colLuck  = [3,6,9].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
+
+    const fmtList = (arr)=> arr.length? arr.join(", ") : "—";
+
+    const parts = [];
+    parts.push(`<p class="lead">Analisi per <b>${name}</b>, nato/a il <b>${dateVal.split("-").reverse().join("/")}</b>.</p>`);
+
+    parts.push(`<p><b>Percorso di Vita:</b> <b>${lifePath}</b> (${meanings[reduceNumber(lifePath,false)]||""}). È il “cammino principale”, ottenuto sommando tutte le cifre della data.</p>`);
+
+    parts.push(`<div class="twocol">
+      <div><p><b>Giorno di nascita:</b> <b>${day}</b> → ${numberBlurb(day)}. Colora lo stile di partenza, l’ego e l’iniziativa.</p>
+      <p><b>Mese:</b> <b>${month}</b> → ${numberBlurb(month)}. Tinge la sensibilità e il rapporto con gli altri.</p></div>
+      <div><p><b>Anno (essenza):</b> <b>${birthYearEssence}</b> → ${numberBlurb(birthYearEssence)}. Imprinting generazionale.</p>
+      <p><b>Anno Personale:</b> <b>${personalYear}</b> → ${numberBlurb(personalYear)}. Ciclo annuale attivo nell’anno selezionato.</p></div>
+    </div>`);
+
+    parts.push(`<div class="hr"></div>`);
+
+    parts.push(`<div class="twocol">
+      <div><p><b>Espressione (Nome):</b> <b>${expression}</b> → ${numberBlurb(expression)}. Come appari e che talento porti nel mondo.</p>
+      <p><b>Anima (Vocali):</b> <b>${soul}</b> → ${numberBlurb(soul)}. Desiderio interiore, ciò che ti muove.</p></div>
+      <div><p><b>Personalità (Consonanti):</b> <b>${personality}</b> → ${numberBlurb(personality)}. Immagine esterna, come vieni percepito.</p>
+      <p class="muted">Impostazioni: numeri maestri <b>${keepMasters? "attivi":"disattivi"}</b>; Y come vocale <b>${yAsVowel? "sì":"no"}</b>.</p></div>
+    </div>`);
+
+    parts.push(`<div class="hr"></div>`);
+
+    parts.push(`<p><b>Matrice Pitagorica:</b> numeri forti (≥2): <b>${fmtList(strong)}</b>; mancanti: <b>${fmtList(missing)}</b>.</p>`);
+
+    // Commento su linee/colonne
+    const commentLine = (label, val)=> `<p>${label}: <b>${val}</b> — ${val===0 ? "area da coltivare" : (val>=3? "linea forte":"equilibrata")}.</p>`;
+    parts.push(`<div class="twocol">
+      <div>
+        ${commentLine("Linea 1–2–3 (Mente)", lineMent)}
+        ${commentLine("Linea 4–5–6 (Lavoro/Praticità)", lineWork)}
+        ${commentLine("Linea 7–8–9 (Spiritualità)", lineSpir)}
+      </div>
+      <div>
+        ${commentLine("Colonna 1–4–7 (Volontà)", colWill)}
+        ${commentLine("Colonna 2–5–8 (Emozioni)", colEmo)}
+        ${commentLine("Colonna 3–6–9 (Fortuna/Spirito)", colLuck)}
+      </div>
+    </div>`);
+
+    // Suggerimenti da numeri mancanti
+    if(missing.length){
+      const tips = {
+        2:"allenare diplomazia e ascolto attivo",
+        3:"coltivare espressione creativa e autoironia",
+        5:"lavorare su flessibilità e cambiamento",
+        7:"dedicare tempo a studio e introspezione",
+        8:"imparare gestione di denaro e confini/potere"
+      };
+      const adv = missing.map(n=> `• ${n}: ${tips[n]||"area da esplorare"}`).join("<br>");
+      parts.push(`<p><b>Aree di crescita (mancanze):</b><br>${adv}</p>`);
+    }
+
+    parts.push(`<p class="muted">Questa lettura è generata automaticamente con metodo pitagorico semplificato.</p>`);
+    return parts.join("\n");
+  };
+
+  const renderMatrix = (cnt)=>{
+    const cont = document.getElementById("matrix");
+    cont.innerHTML = "";
+    [1,2,3,4,5,6,7,8,9].forEach(d=>{
+      const el = document.createElement("div");
+      el.className = "cell";
+      el.innerHTML = `<div class="digit">${d}</div><div class="count">${cnt[d]||0}</div>`;
+      cont.appendChild(el);
+    });
   };
 
   const compute = ()=>{
     const keepMasters = document.getElementById("keepMasters").checked;
     const yAsVowel = document.getElementById("yAsVowel").checked;
-    const full = document.getElementById("fullname").value.trim();
+    const name = document.getElementById("fullname").value.trim();
     const dateVal = document.getElementById("birthdate").value;
     const ty = parseInt(document.getElementById("targetyear").value);
 
-    if(!dateVal){
-      alert("Inserisci la data di nascita.");
-      return;
-    }
-    if(!full){
-      alert("Inserisci nome e cognome.");
-      return;
-    }
+    if(!dateVal){ alert("Inserisci la data di nascita."); return; }
+    if(!name){ alert("Inserisci nome e cognome."); return; }
+
+    const yyyy = parseInt(dateVal.slice(0,4));
+    const mm   = parseInt(dateVal.slice(5,7));
+    const dd   = parseInt(dateVal.slice(8,10));
+
     const dateDigits = parseDateDigits(dateVal);
-    // Life Path: sum of all digits of date
-    const lp = reduceNumber(dateDigits.reduce((a,b)=>a+b,0), keepMasters);
-
-    // Birth year essence: reduce year digits
-    const year = parseInt(dateVal.slice(0,4));
-    const yearEss = reduceNumber(sumDigits(year), keepMasters);
-
-    // Personal Year: day+month+targetYear digits
-    const d = parseInt(dateVal.slice(8,10));
-    const m = parseInt(dateVal.slice(5,7));
+    const lifePath = reduceNumber(dateDigits.reduce((a,b)=>a+b,0), keepMasters);
+    const birthYearEssence = reduceNumber((yyyy+"").split("").reduce((a,b)=>a+parseInt(b),0), keepMasters);
     const targetYear = (!isNaN(ty) && ty>=1900)? ty : (new Date()).getFullYear();
-    const personalYear = reduceNumber(sumDigits(d) + sumDigits(m) + sumDigits(targetYear), false);
+    const personalYear = reduceNumber(
+      (dd+"").split("").reduce((a,b)=>a+parseInt(b),0) +
+      (mm+"").split("").reduce((a,b)=>a+parseInt(b),0) +
+      (targetYear+"").split("").reduce((a,b)=>a+parseInt(b),0),
+      false
+    );
 
-    // Name numbers
-    const letters = [...full].map(ch => mapChar(ch)).filter(v => v!==null);
-    const expressionRaw = letters.reduce((a,b)=>a+b,0);
-    const expression = reduceNumber(expressionRaw, keepMasters);
+    const letters = [...name].map(ch => mapChar(ch)).filter(v => v!==null);
+    const expression = reduceNumber(letters.reduce((a,b)=>a+b,0), keepMasters);
+    const vowels = [...name].filter(ch=> isVowel(ch, yAsVowel)).map(ch => mapChar(ch)).filter(v=>v!==null);
+    const soul = reduceNumber(vowels.reduce((a,b)=>a+b,0), keepMasters);
+    const consonants = [...name].filter(ch=> !isVowel(ch, yAsVowel)).map(ch => mapChar(ch)).filter(v=>v!==null);
+    const personality = reduceNumber(consonants.reduce((a,b)=>a+b,0), keepMasters);
 
-    const vowels = [...full].filter(ch=> isVowel(ch, yAsVowel)).map(ch => mapChar(ch)).filter(v=>v!==null);
-    const soulRaw = vowels.reduce((a,b)=>a+b,0);
-    const soul = reduceNumber(soulRaw, keepMasters);
-
-    const consonants = [...full].filter(ch=> !isVowel(ch, yAsVowel)).map(ch => mapChar(ch)).filter(v=>v!==null);
-    const personalityRaw = consonants.reduce((a,b)=>a+b,0);
-    const personality = reduceNumber(personalityRaw, keepMasters);
-
-    // Matrix counts
     const matrix = countsToMatrix(dateDigits);
 
-    // Write quick UI
-    document.getElementById("lifePath").textContent = lp;
+    // Quick UI
+    document.getElementById("lifePath").textContent = lifePath;
     document.getElementById("expression").textContent = expression;
     document.getElementById("soul").textContent = soul;
     document.getElementById("personality").textContent = personality;
     document.getElementById("personalYear").textContent = personalYear;
-    document.getElementById("birthYearEssence").textContent = yearEss;
+    document.getElementById("birthYearEssence").textContent = birthYearEssence;
     renderMatrix(matrix);
 
-    // Reading brief
-    const reading = describe({lifePath:lp, expression, soul, personality, personalYear, birthYearEssence:yearEss, matrix});
-    document.getElementById("reading").textContent = reading;
+    // Rich reading
+    const html = buildRichReading({
+      name, dateVal, keepMasters, yAsVowel,
+      lifePath, expression, soul, personality, personalYear, birthYearEssence,
+      day: reduceNumber(dd,false), month: reduceNumber(mm,false), year: yyyy, matrix
+    });
+    document.getElementById("readingRich").innerHTML = html;
   };
 
   const clearAll = ()=>{
@@ -287,20 +354,17 @@
     document.getElementById("personalYear").textContent = "—";
     document.getElementById("birthYearEssence").textContent = "—";
     document.getElementById("matrix").innerHTML = "";
-    document.getElementById("reading").textContent = "Inserisci i dati e premi “Calcola”.";
+    document.getElementById("readingRich").textContent = "Inserisci i dati e premi “Calcola”.";
   };
 
   // init
   const now = new Date();
-  const yyyy = now.getFullYear();
-  document.getElementById("targetyear").value = yyyy;
+  document.getElementById("targetyear").value = now.getFullYear();
+  renderMatrix({1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0});
 
   document.getElementById("calcBtn").addEventListener("click", compute);
   document.getElementById("clearBtn").addEventListener("click", clearAll);
   document.getElementById("printBtn").addEventListener("click", ()=> window.print());
-
-  // Build empty matrix at start
-  renderMatrix({1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0});
 })();
 </script>
 </body>
