@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Numerology — Calcolatore Pitagorico</title>
+  <meta name="description" content="App semplice per calcolare numerologia pitagorica: percorso di vita, espressione, anima, personalità, anno personale e matrice 3×3.">
+  <style>
+    :root{
+      --bg:#0f1115; --card:#151823; --ink:#eaeefb; --muted:#9aa3b2; --acc:#7aa2ff; --line:#222738; --ok:#2ecc71; --warn:#f39c12;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;line-height:1.45}
+    a{color:var(--acc);text-decoration:none}
+    .wrap{max-width:980px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;gap:16px;padding:12px 0 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:linear-gradient(180deg, rgba(15,17,21,.97), rgba(15,17,21,.85));backdrop-filter: blur(6px);z-index:2}
+    header h1{margin:0;font-size:22px}
+    header .sub{color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:18px}
+    @media(min-width:900px){ .grid{grid-template-columns:1.1fr .9fr} }
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .card h2{margin:0 0 10px;font-size:18px}
+    label{display:block;margin:10px 0 6px;color:var(--muted);font-size:14px}
+    input[type="text"], input[type="date"], input[type="number"]{
+      width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0f131b;color:var(--ink);
+    }
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    button{
+      border:1px solid var(--line);background:#101522;color:var(--ink);
+      padding:10px 14px;border-radius:10px;cursor:pointer
+    }
+    button.primary{background:var(--acc);color:#0a0d14;border-color:#5b84ff}
+    .muted{color:var(--muted)}
+    .kv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .kv .item{background:#0f131b;border:1px solid var(--line);border-radius:12px;padding:12px}
+    .kv .k{color:var(--muted);font-size:13px}
+    .kv .v{font-size:22px;font-weight:600}
+    .note{font-size:13px;color:var(--muted)}
+    .switch{display:flex;align-items:center;gap:8px;margin-top:8px}
+    .switch input{transform:scale(1.2)}
+    .matrix{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+    .cell{border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;background:#0f131b}
+    .cell .digit{font-size:12px;color:var(--muted)}
+    .cell .count{font-size:26px;font-weight:700;margin-top:2px}
+    .legend{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:12px;color:var(--muted)}
+    .section h3{margin:16px 0 8px;font-size:16px}
+    footer{margin:24px 0 8px;color:var(--muted);font-size:12px}
+    .success{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .hr{height:1px;background:var(--line);margin:14px 0}
+    .pre{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:#0f131b;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Numerology — Calcolatore Pitagorico</h1>
+        <div class="sub">Inserisci nome e data di nascita. L'app calcola: Percorso di Vita, Espressione, Anima, Personalità, Matrice 3×3, Anno Personale.</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Dati</h2>
+        <label for="fullname">Nome e cognome (battesimo)</label>
+        <input id="fullname" type="text" placeholder="Es. Alessandro Pezzali" autocomplete="name"/>
+
+        <div class="row">
+          <div>
+            <label for="birthdate">Data di nascita</label>
+            <input id="birthdate" type="date" />
+          </div>
+          <div>
+            <label for="targetyear">Anno per il calcolo dell'Anno Personale</label>
+            <input id="targetyear" type="number" min="1900" max="3000" />
+          </div>
+        </div>
+
+        <div class="switch">
+          <input id="keepMasters" type="checkbox" checked/>
+          <label for="keepMasters">Mantieni numeri maestri (11, 22, 33) dove applicabile</label>
+        </div>
+        <div class="switch">
+          <input id="yAsVowel" type="checkbox"/>
+          <label for="yAsVowel">Considera Y come vocale</label>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="calcBtn">Calcola</button>
+          <button id="clearBtn">Pulisci</button>
+          <button id="printBtn">Stampa / PDF</button>
+        </div>
+        <div class="note" style="margin-top:8px">
+          Dati solo in locale, nessun invio a server. Metodo pitagorico (A=1…Z=8, ciclo a 9).
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Risultati Rapidi</h2>
+        <div class="kv" id="quick">
+          <div class="item"><div class="k">Percorso di Vita</div><div class="v" id="lifePath">—</div></div>
+          <div class="item"><div class="k">Espressione (Nome)</div><div class="v" id="expression">—</div></div>
+          <div class="item"><div class="k">Anima (Vocali)</div><div class="v" id="soul">—</div></div>
+          <div class="item"><div class="k">Personalità (Consonanti)</div><div class="v" id="personality">—</div></div>
+          <div class="item"><div class="k">Anno Personale</div><div class="v" id="personalYear">—</div></div>
+          <div class="item"><div class="k">Essenza Anno di Nascita</div><div class="v" id="birthYearEssence">—</div></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card section">
+      <h3>Matrice Pitagorica (Quadrato 3×3)</h3>
+      <div class="matrix" id="matrix">
+        <!-- 9 celle -->
+      </div>
+      <div class="legend">
+        <div>1–2–3: Mente</div>
+        <div>4–5–6: Lavoro/Praticità</div>
+        <div>7–8–9: Spiritualità</div>
+        <div>1–4–7: Volontà</div>
+        <div>2–5–8: Emozioni</div>
+        <div>3–6–9: Fortuna/Spirito</div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h3>Interpretazione Breve</h3>
+      <div id="reading" class="pre">Inserisci i dati e premi “Calcola”.</div>
+    </section>
+
+    <footer>
+      Fatto con ♥. Metodo pitagorico semplificato. Questa app non fornisce consulenza professionale; è pensata per uso personale/divertimento.
+    </footer>
+  </div>
+
+<script>
+(function(){
+  const mapChar = (ch)=>{
+    const c = ch.toUpperCase();
+    if(c < 'A' || c > 'Z') return null;
+    // A=1...I=9, J=1...R=9, S=1...Z=8
+    const code = c.charCodeAt(0) - 64; // A=1
+    return ((code - 1) % 9) + 1;
+  };
+
+  const isVowel = (ch, yAsVowel)=>{
+    const v = "AEIOU" + (yAsVowel ? "Y" : "");
+    return v.indexOf(ch.toUpperCase()) !== -1;
+  };
+
+  const sumDigits = (n)=>{
+    return n.toString().split("").reduce((a,b)=> a + (parseInt(b)||0), 0);
+  };
+
+  const reduceNumber = (n, keepMasters)=>{
+    // Reduce to 1-9, preserving 11/22/33 if keepMasters
+    const masters = new Set([11,22,33]);
+    let x = n;
+    while(x > 9){
+      if(keepMasters && masters.has(x)) return x;
+      x = sumDigits(x);
+    }
+    return x;
+  };
+
+  const textReduceDigits = (digits, keepMasters)=>{
+    const total = digits.reduce((a,b)=>a+b,0);
+    const reduced = reduceNumber(total, keepMasters);
+    return {total, reduced};
+  };
+
+  const parseDateDigits = (value)=>{
+    // returns array of digits of YYYY-MM-DD without zeros? We'll keep zeros then ignore for matrix later.
+    const ds = value.replaceAll("-","").split("").map(d => parseInt(d)||0);
+    return ds;
+  };
+
+  const countsToMatrix = (digits)=>{
+    // count 1..9 (ignore zeros)
+    const cnt = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0};
+    digits.forEach(d=>{ if(d>=1 && d<=9) cnt[d]++; });
+    return cnt;
+  };
+
+  const renderMatrix = (cnt)=>{
+    const cont = document.getElementById("matrix");
+    cont.innerHTML = "";
+    const order = [1,2,3,4,5,6,7,8,9];
+    order.forEach(d=>{
+      const el = document.createElement("div");
+      el.className = "cell";
+      el.innerHTML = `<div class="digit"> ${d} </div><div class="count">${cnt[d]||0}</div>`;
+      cont.appendChild(el);
+    });
+  };
+
+  const describe = (vals)=>{
+    const {lifePath, expression, soul, personality, personalYear, birthYearEssence, matrix} = vals;
+    const lines = [];
+    lines.push(`• Percorso di Vita: ${lifePath} — creatività/comunicazione (3), leadership/inizio (1), cooperazione (2), lavoro/praticità (4–6), spiritualità (9), ecc. L'interpretazione dipende dal numero: vedi sintesi sotto.`);
+    lines.push(`• Espressione (Nome): ${expression}.`);
+    lines.push(`• Anima (Vocali): ${soul}. Desiderio interiore.`);
+    lines.push(`• Personalità (Consonanti): ${personality}. Immagine esterna.`);
+    lines.push(`• Anno Personale: ${personalYear}.`);
+    lines.push(`• Essenza anno di nascita: ${birthYearEssence}.`);
+    lines.push("");
+    // Matrix brief
+    const missing = Object.keys(matrix).filter(k => matrix[k]===0).map(Number);
+    const strong = Object.keys(matrix).filter(k => matrix[k]>=2).map(Number);
+    lines.push(`Matrice 3×3 — presenti forti (≥2): ${strong.length? strong.join(", "):"nessuno"}; mancanti: ${missing.length? missing.join(", "):"nessuno"}.`);
+    lines.push("");
+    lines.push("Nota: questa è una lettura breve. Per un'analisi estesa, usa la stampa/PDF.");
+    return lines.join("\n");
+  };
+
+  const compute = ()=>{
+    const keepMasters = document.getElementById("keepMasters").checked;
+    const yAsVowel = document.getElementById("yAsVowel").checked;
+    const full = document.getElementById("fullname").value.trim();
+    const dateVal = document.getElementById("birthdate").value;
+    const ty = parseInt(document.getElementById("targetyear").value);
+
+    if(!dateVal){
+      alert("Inserisci la data di nascita.");
+      return;
+    }
+    if(!full){
+      alert("Inserisci nome e cognome.");
+      return;
+    }
+    const dateDigits = parseDateDigits(dateVal);
+    // Life Path: sum of all digits of date
+    const lp = reduceNumber(dateDigits.reduce((a,b)=>a+b,0), keepMasters);
+
+    // Birth year essence: reduce year digits
+    const year = parseInt(dateVal.slice(0,4));
+    const yearEss = reduceNumber(sumDigits(year), keepMasters);
+
+    // Personal Year: day+month+targetYear digits
+    const d = parseInt(dateVal.slice(8,10));
+    const m = parseInt(dateVal.slice(5,7));
+    const targetYear = (!isNaN(ty) && ty>=1900)? ty : (new Date()).getFullYear();
+    const personalYear = reduceNumber(sumDigits(d) + sumDigits(m) + sumDigits(targetYear), false);
+
+    // Name numbers
+    const letters = [...full].map(ch => mapChar(ch)).filter(v => v!==null);
+    const expressionRaw = letters.reduce((a,b)=>a+b,0);
+    const expression = reduceNumber(expressionRaw, keepMasters);
+
+    const vowels = [...full].filter(ch=> isVowel(ch, yAsVowel)).map(ch => mapChar(ch)).filter(v=>v!==null);
+    const soulRaw = vowels.reduce((a,b)=>a+b,0);
+    const soul = reduceNumber(soulRaw, keepMasters);
+
+    const consonants = [...full].filter(ch=> !isVowel(ch, yAsVowel)).map(ch => mapChar(ch)).filter(v=>v!==null);
+    const personalityRaw = consonants.reduce((a,b)=>a+b,0);
+    const personality = reduceNumber(personalityRaw, keepMasters);
+
+    // Matrix counts
+    const matrix = countsToMatrix(dateDigits);
+
+    // Write quick UI
+    document.getElementById("lifePath").textContent = lp;
+    document.getElementById("expression").textContent = expression;
+    document.getElementById("soul").textContent = soul;
+    document.getElementById("personality").textContent = personality;
+    document.getElementById("personalYear").textContent = personalYear;
+    document.getElementById("birthYearEssence").textContent = yearEss;
+    renderMatrix(matrix);
+
+    // Reading brief
+    const reading = describe({lifePath:lp, expression, soul, personality, personalYear, birthYearEssence:yearEss, matrix});
+    document.getElementById("reading").textContent = reading;
+  };
+
+  const clearAll = ()=>{
+    document.getElementById("fullname").value = "";
+    document.getElementById("birthdate").value = "";
+    document.getElementById("targetyear").value = "";
+    document.getElementById("keepMasters").checked = true;
+    document.getElementById("yAsVowel").checked = false;
+    document.getElementById("lifePath").textContent = "—";
+    document.getElementById("expression").textContent = "—";
+    document.getElementById("soul").textContent = "—";
+    document.getElementById("personality").textContent = "—";
+    document.getElementById("personalYear").textContent = "—";
+    document.getElementById("birthYearEssence").textContent = "—";
+    document.getElementById("matrix").innerHTML = "";
+    document.getElementById("reading").textContent = "Inserisci i dati e premi “Calcola”.";
+  };
+
+  // init
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  document.getElementById("targetyear").value = yyyy;
+
+  document.getElementById("calcBtn").addEventListener("click", compute);
+  document.getElementById("clearBtn").addEventListener("click", clearAll);
+  document.getElementById("printBtn").addEventListener("click", ()=> window.print());
+
+  // Build empty matrix at start
+  renderMatrix({1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0});
+})();
+</script>
+</body>
+</html>
