@@ -4,10 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Numerology — Calcolatore Pitagorico</title>
-  <meta name="description" content="App per numerologia pitagorica: percorso di vita, espressione, anima, personalità, anno personale, matrice 3×3 e interpretazione estesa.">
+  <meta name="description" content="App per numerologia pitagorica con interpretazione estesa: presenti/mancanti, linee della matrice, sintesi.">
   <style>
     :root{
-      --bg:#0f1115; --card:#151823; --ink:#eaeefb; --muted:#9aa3b2; --acc:#7aa2ff; --line:#222738; --ok:#2ecc71; --warn:#f39c12;
+      --bg:#0f1115; --card:#151823; --ink:#eaeefb; --muted:#9aa3b2; --acc:#7aa2ff; --line:#222738;
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;line-height:1.45}
@@ -30,7 +30,7 @@
       border:1px solid var(--line);background:#101522;color:var(--ink);
       padding:10px 14px;border-radius:10px;cursor:pointer
     }
-    button.primary{background:var(--acc);color:#0a0d14;border-color:#5b84ff}
+    button.primary{background:#7aa2ff;color:#0a0d14;border-color:#5b84ff}
     .muted{color:var(--muted)}
     .kv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .kv .item{background:#0f131b;border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -47,16 +47,12 @@
     .section h3{margin:16px 0 8px;font-size:16px}
     footer{margin:24px 0 8px;color:var(--muted);font-size:12px}
     .hr{height:1px;background:var(--line);margin:14px 0}
-    .pre{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:#0f131b;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px}
     .rich p{margin:.4rem 0}
     .rich .lead{font-weight:600}
+    ul{margin:.4rem 0 .6rem 1rem}
     .twocol{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:900px){ .twocol{grid-template-columns:1fr 1fr} }
-    @media print{
-      header{position:static;background:transparent;border:none}
-      .wrap{padding:0}
-      .card{page-break-inside:avoid}
-    }
+    .copybar{display:flex;gap:8px;align-items:center;margin-top:8px}
   </style>
 </head>
 <body>
@@ -64,7 +60,7 @@
     <header>
       <div>
         <h1>Numerology — Calcolatore Pitagorico</h1>
-        <div class="sub">Inserisci nome e data di nascita. L'app calcola: Percorso di Vita, Espressione, Anima, Personalità, Matrice 3×3, Anno Personale e una <b>interpretazione estesa</b>.</div>
+        <div class="sub">Interpretazione completa: Percorso, Nome (Espressione/Anima/Personalità), Matrice 3×3, Linee/Colonne, presenti e mancanti.</div>
       </div>
     </header>
 
@@ -98,6 +94,7 @@
           <button class="primary" id="calcBtn">Calcola</button>
           <button id="clearBtn">Pulisci</button>
           <button id="printBtn">Stampa / PDF</button>
+          <button id="copyBtn">Copia interpretazione</button>
         </div>
         <div class="note" style="margin-top:8px">
           Dati solo in locale, nessun invio a server. Metodo pitagorico (A=1…Z=8, ciclo a 9).
@@ -154,6 +151,26 @@
     9:"umanità, empatia universale, compassione, ispirazione"
   };
 
+  const presentTexts = {
+    1:"Forte ego, determinazione, individualismo. Capacità di leadership. Talvolta testardaggine.",
+    2:"Cooperazione, diplomazia, tatto; sensibilità alle dinamiche relazionali.",
+    3:"Creatività, comunicazione, espressione artistica; leggerezza e gioia.",
+    4:"Concretezza, senso pratico, capacità di costruire e organizzare.",
+    5:"Versatilità, adattamento, desiderio di cambiamento e movimento.",
+    6:"Responsabilità, famiglia, sensibilità verso i doveri.",
+    7:"Introspezione, ricerca della verità, studio e profondità.",
+    8:"Gestione, autorevolezza, orientamento al risultato e alle risorse.",
+    9:"Spiritualità, altruismo, umanità e profondità interiore; vocazione universale."
+  };
+
+  const missingTexts = {
+    2:"Mancanza di diplomazia naturale: bisogna lavorare su collaborazione e ascolto degli altri.",
+    3:"Mancanza di leggerezza e autoironia spontanea: il “gioco” va coltivato volontariamente.",
+    5:"Mancanza di versatilità innata: bisogna sviluppare flessibilità e capacità di adattamento.",
+    7:"Mancanza di introspezione automatica: la saggezza si costruisce più con l’esperienza che con l’isolamento.",
+    8:"Mancanza di potere materiale innato: l’autorità e la gestione del denaro si imparano, non vengono di default."
+  };
+
   const mapChar = (ch)=>{
     const c = ch.toUpperCase();
     if(c < 'A' || c > 'Z') return null;
@@ -202,78 +219,89 @@
     return meanings[key] ? `${key} → ${meanings[key]}` : `${n}`;
   };
 
-  const buildRichReading = (vals)=>{
-    const {
-      name, dateVal, keepMasters, yAsVowel,
-      lifePath, expression, soul, personality, personalYear, birthYearEssence,
-      day, month, year, matrix
-    } = vals;
+  const li = (t)=> `<li>${t}</li>`;
 
-    const strong = Object.keys(matrix).filter(k => matrix[k]>=2).map(Number);
-    const missing = Object.keys(matrix).filter(k => matrix[k]==0).map(Number);
+  const buildInterpretationBlocks = (cnt)=>{
+    const present = [];
+    for(let d=1; d<=9; d++){
+      if(cnt[d] > 0){
+        const lab = cnt[d] >= 2 ? `${d} (doppio)` : `${d}`;
+        present.push(li(`<b>${lab}</b> → ${presentTexts[d]||""}`));
+      }
+    }
+    const missing = [];
+    for(let d of [2,3,5,7,8]){ // solo quelli con testo dedicato
+      if(cnt[d] === 0){
+        missing.push(li(`<b>${d}</b> → ${missingTexts[d]}`));
+      }
+    }
+    return `<p>🔮 <b>Interpretazione</b></p>
+    <p><b>✅ Numeri presenti</b></p><ul>${present.join("")||li("—")}</ul>
+    <p><b>❌ Numeri mancanti</b></p><ul>${missing.join("")||li("—")}</ul>`;
+  };
 
-    const lineMent = [1,2,3].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
-    const lineWork = [4,5,6].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
-    const lineSpir = [7,8,9].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
-    const colWill  = [1,4,7].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
-    const colEmo   = [2,5,8].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
-    const colLuck  = [3,6,9].map(x=>matrix[x]).reduce((a,b)=>a+b,0);
+  const buildLinesNarrative = (cnt)=>{
+    const sum = arr => arr.reduce((a,b)=>a+(cnt[b]||0),0);
+    const line1 = sum([1,2,3]);
+    const line2 = sum([4,5,6]);
+    const line3 = sum([7,8,9]);
+    const col1  = sum([1,4,7]);
+    const col2  = sum([2,5,8]);
+    const col3  = sum([3,6,9]);
 
-    const fmtList = (arr)=> arr.length? arr.join(", ") : "—";
+    const d = (n)=> cnt[n]>0;
+    const item = (label, text)=> li(`<b>${label}</b> → ${text}`);
 
-    const parts = [];
-    parts.push(`<p class="lead">Analisi per <b>${name}</b>, nato/a il <b>${dateVal.split("-").reverse().join("/")}</b>.</p>`);
+    const t1 = (d(1)&&!d(2)&&!d(3)) ? "Solo il 1, mancano 2 e 3 → forte iniziativa personale ma serve imparare la mediazione e il gioco mentale."
+              : (line1===0?"vuota":(line1>=3?"linea forte":"equilibrata"));
 
-    parts.push(`<p><b>Percorso di Vita:</b> <b>${lifePath}</b> (${meanings[reduceNumber(lifePath,false)]||""}). È il “cammino principale”, ottenuto sommando tutte le cifre della data.</p>`);
+    const t2 = (d(4)&&d(6)&&!d(5)) ? "Presenti 4 e 6, manca il 5 → buona struttura e responsabilità, ma serve flessibilità."
+              : (line2===0?"vuota":(line2>=3?"linea forte":"equilibrata"));
 
-    parts.push(`<div class="twocol">
-      <div><p><b>Giorno di nascita:</b> <b>${day}</b> → ${numberBlurb(day)}. Colora lo stile di partenza, l’ego e l’iniziativa.</p>
-      <p><b>Mese:</b> <b>${month}</b> → ${numberBlurb(month)}. Tinge la sensibilità e il rapporto con gli altri.</p></div>
-      <div><p><b>Anno (essenza):</b> <b>${birthYearEssence}</b> → ${numberBlurb(birthYearEssence)}. Imprinting generazionale.</p>
-      <p><b>Anno Personale:</b> <b>${personalYear}</b> → ${numberBlurb(personalYear)}. Ciclo annuale attivo nell’anno selezionato.</p></div>
-    </div>`);
+    const t3 = (d(9)&&!d(7)&&!d(8)) ? "Presente solo il 9 → tanta spiritualità, ma rischia di essere “sbilanciata” senza radici materiali."
+              : (line3===0?"vuota":(line3>=3?"linea forte":"equilibrata"));
 
-    parts.push(`<div class="hr"></div>`);
+    const c1 = (d(1)&&d(4)&&!d(7)) ? "Presenti 1 e 4, manca 7 → tanta volontà e pragmatismo, ma poca introspezione."
+              : (col1===0?"vuota":(col1>=3?"colonna forte":"equilibrata"));
 
-    parts.push(`<div class="twocol">
-      <div><p><b>Espressione (Nome):</b> <b>${expression}</b> → ${numberBlurb(expression)}. Come appari e che talento porti nel mondo.</p>
-      <p><b>Anima (Vocali):</b> <b>${soul}</b> → ${numberBlurb(soul)}. Desiderio interiore, ciò che ti muove.</p></div>
-      <div><p><b>Personalità (Consonanti):</b> <b>${personality}</b> → ${numberBlurb(personality)}. Immagine esterna, come vieni percepito.</p>
-      <p class="muted">Impostazioni: numeri maestri <b>${keepMasters? "attivi":"disattivi"}</b>; Y come vocale <b>${yAsVowel? "sì":"no"}</b>.</p></div>
-    </div>`);
+    const c2 = (!d(2)&&!d(5)&&!d(8)) ? "Completamente vuota → area debole: bisogna lavorare su emozioni, empatia pratica e rapporto diretto con le persone."
+              : (col2===0?"vuota":(col2>=3?"colonna forte":"equilibrata"));
 
-    parts.push(`<div class="hr"></div>`);
+    const c3 = (d(6)&&d(9)) ? "Presenti 6 e 9 → linea forte: sensibilità, destino spirituale e protezione nelle situazioni difficili."
+              : (col3===0?"vuota":(col3>=3?"colonna forte":"equilibrata"));
 
-    parts.push(`<p><b>Matrice Pitagorica:</b> numeri forti (≥2): <b>${fmtList(strong)}</b>; mancanti: <b>${fmtList(missing)}</b>.</p>`);
+    return `<p>🌟 <b>Linee della matrice</b></p><ul>
+      ${item("Linea orizzontale 1–2–3 (Mente)", t1)}
+      ${item("Linea orizzontale 4–5–6 (Lavoro/Praticità)", t2)}
+      ${item("Linea orizzontale 7–8–9 (Spiritualità)", t3)}
+      ${item("Linea verticale 1–4–7 (Volontà)", c1)}
+      ${item("Linea verticale 2–5–8 (Emozioni)", c2)}
+      ${item("Linea verticale 3–6–9 (Fortuna/Spiritualità)", c3)}
+    </ul>`;
+  };
 
-    const commentLine = (label, val)=> `<p>${label}: <b>${val}</b> — ${val===0 ? "area da coltivare" : (val>=3? "linea forte":"equilibrata")}.</p>`;
-    parts.push(`<div class="twocol">
-      <div>
-        ${commentLine("Linea 1–2–3 (Mente)", lineMent)}
-        ${commentLine("Linea 4–5–6 (Lavoro/Praticità)", lineWork)}
-        ${commentLine("Linea 7–8–9 (Spiritualità)", lineSpir)}
-      </div>
-      <div>
-        ${commentLine("Colonna 1–4–7 (Volontà)", colWill)}
-        ${commentLine("Colonna 2–5–8 (Emozioni)", colEmo)}
-        ${commentLine("Colonna 3–6–9 (Fortuna/Spirito)", colLuck)}
-      </div>
-    </div>`);
+  const buildSynthesis = (cnt, dateStr)=>{
+    const has = n => cnt[n]>0;
+    const dbl = n => cnt[n]>=2;
+    const bullets = [];
 
-    if(missing.length){
-      const tips = {
-        2:"allenare diplomazia e ascolto attivo",
-        3:"coltivare espressione creativa e autoironia",
-        5:"lavorare su flessibilità e cambiamento",
-        7:"dedicare tempo a studio e introspezione",
-        8:"imparare gestione di denaro e confini/potere"
-      };
-      const adv = missing.map(n=> `• ${n}: ${tips[n]||"area da esplorare"}`).join("<br>");
-      parts.push(`<p><b>Aree di crescita (mancanze):</b><br>${adv}</p>`);
+    const strong = [];
+    if(dbl(1)) strong.push("Forza personale (doppio 1)");
+    if(dbl(9)) strong.push("Vocazione spirituale (doppio 9)");
+    const roots = [4,6].filter(has);
+    if(roots.length) strong.push(`Radici pratiche (${roots.join(" e ")})`);
+    if(strong.length) bullets.push("• " + ", ".join ? ", ".join(strong) : strong.join(", ") + ".");
+
+    const lacks = [2,5,8].filter(n=>!has(n));
+    if(lacks.length){
+      bullets.push(`• Lacune emotive e relazionali (manca ${lacks.join("-")}) → lezioni su relazioni, adattamento e gestione del potere/denaro.`);
     }
 
-    parts.push(`<p class="muted">Questa lettura è generata automaticamente con metodo pitagorico semplificato.</p>`);
-    return parts.join("\n");
+    bullets.push("• Quadro complessivo: iniziativa + senso pratico + responsabilità + profondità spirituale, bilanciati da un lavoro costante su relazioni e adattabilità.");
+
+    return `<p>🧭 <b>Sintesi della Matrice</b></p>
+    <p>La tua data ${dateStr} mostra:</p>
+    <ul><li>${bullets.join("</li><li>")}</li></ul>`;
   };
 
   const compute = ()=>{
@@ -318,12 +346,34 @@
     document.getElementById("birthYearEssence").textContent = birthYearEssence;
     renderMatrix(matrix);
 
-    const html = buildRichReading({
-      name, dateVal, keepMasters, yAsVowel,
-      lifePath, expression, soul, personality, personalYear, birthYearEssence,
-      day: reduceNumber(dd,false), month: reduceNumber(mm,false), year: yyyy, matrix
-    });
-    document.getElementById("readingRich").innerHTML = html;
+    const dateShown = dateVal.split("-").reverse().join("/");
+    const parts = [];
+    parts.push(`<p class="lead">Analisi per <b>${name}</b>, nato/a il <b>${dateShown}</b>.</p>`);
+    parts.push(`<p><b>Percorso di Vita:</b> <b>${lifePath}</b> (${meanings[reduceNumber(lifePath,false)]||""}).</p>`);
+    parts.push(`<div class="twocol">
+      <div><p><b>Giorno di nascita:</b> <b>${reduceNumber(dd,false)}</b> → ${numberBlurb(dd)}.</p>
+      <p><b>Mese:</b> <b>${reduceNumber(mm,false)}</b> → ${numberBlurb(mm)}.</p></div>
+      <div><p><b>Anno (essenza):</b> <b>${birthYearEssence}</b> → ${numberBlurb(birthYearEssence)}.</p>
+      <p><b>Anno Personale:</b> <b>${personalYear}</b> → ${numberBlurb(personalYear)}.</p></div>
+    </div>`);
+    parts.push(`<div class="hr"></div>`);
+    parts.push(`<div class="twocol">
+      <div><p><b>Espressione (Nome):</b> <b>${expression}</b> → ${numberBlurb(expression)}.</p>
+      <p><b>Anima (Vocali):</b> <b>${soul}</b> → ${numberBlurb(soul)}.</p></div>
+      <div><p><b>Personalità (Consonanti):</b> <b>${personality}</b> → ${numberBlurb(personality)}.</p>
+      <p class="muted">Impostazioni: numeri maestri <b>${keepMasters? "attivi":"disattivi"}</b>; Y come vocale <b>${yAsVowel? "sì":"no"}</b>.</p></div>
+    </div>`);
+    parts.push(`<div class="hr"></div>`);
+    parts.push(buildInterpretationBlocks(matrix));
+    parts.push(`<div class="hr"></div>`);
+    parts.push(buildLinesNarrative(matrix));
+    parts.push(`<div class="hr"></div>`);
+    parts.push(buildSynthesis(matrix, dateShown));
+
+    const el = document.getElementById("readingRich");
+    el.innerHTML = parts.join("\n");
+    // Store plain text for "copy"
+    window.__lastInterpretationText = el.innerText;
   };
 
   const clearAll = ()=>{
@@ -340,6 +390,17 @@
     document.getElementById("birthYearEssence").textContent = "—";
     document.getElementById("matrix").innerHTML = "";
     document.getElementById("readingRich").textContent = "Inserisci i dati e premi “Calcola”.";
+    window.__lastInterpretationText = "";
+  };
+
+  const copyInterpretation = async ()=>{
+    try{
+      const txt = window.__lastInterpretationText || document.getElementById("readingRich").innerText;
+      await navigator.clipboard.writeText(txt.trim());
+      alert("Interpretazione copiata negli appunti.");
+    }catch(e){
+      alert("Copia non riuscita: " + e);
+    }
   };
 
   // init
@@ -350,6 +411,7 @@
   document.getElementById("calcBtn").addEventListener("click", compute);
   document.getElementById("clearBtn").addEventListener("click", clearAll);
   document.getElementById("printBtn").addEventListener("click", ()=> window.print());
+  document.getElementById("copyBtn").addEventListener("click", copyInterpretation);
 })();
 </script>
 </body>
