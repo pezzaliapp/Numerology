@@ -1,16 +1,6 @@
-# Numerology (Pitagorico) — Web App single-folder (v2)
+# Numerology (Pitagorico) — v2.1 (fix)
 
-Questa versione aggiunge una **Interpretazione Estesa** con testo narrativo (Percorso di Vita, Giorno/Mese/Anno, Nome — Espressione/Anima/Personalità, Matrice 3×3 con linee/colonne e consigli).
+**Fix:** risolto un errore JS dovuto a una doppia dichiarazione di funzione che impediva l'esecuzione dello script in alcune configurazioni.
 
-## Come usare
-- Apri `index.html` in un browser moderno (desktop o smartphone).
-- Tutto gira **in locale**; nessun dato inviato.
-
-## Novità
-- Sezione “Interpretazione Estesa” con paragrafi chiari e consigli su numeri mancanti.
-- Miglior layout di stampa/PDF.
-
-## Note di calcolo
-- Lettere→numeri: metodo pitagorico (A=1..I=9; J=1..R=9; S=1..Z=8).
-- Riduzione: singola cifra con opzione **numeri maestri 11/22/33**.
-- Anno personale: somma ridotta di (giorno + mese + anno target).
+## Uso
+Sostituisci il tuo `index.html` con quello di questa versione. Nessuna altra modifica necessaria.

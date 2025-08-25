@@ -246,7 +246,6 @@
 
     parts.push(`<p><b>Matrice Pitagorica:</b> numeri forti (≥2): <b>${fmtList(strong)}</b>; mancanti: <b>${fmtList(missing)}</b>.</p>`);
 
-    // Commento su linee/colonne
     const commentLine = (label, val)=> `<p>${label}: <b>${val}</b> — ${val===0 ? "area da coltivare" : (val>=3? "linea forte":"equilibrata")}.</p>`;
     parts.push(`<div class="twocol">
       <div>
@@ -261,7 +260,6 @@
       </div>
     </div>`);
 
-    // Suggerimenti da numeri mancanti
     if(missing.length){
       const tips = {
         2:"allenare diplomazia e ascolto attivo",
@@ -276,17 +274,6 @@
 
     parts.push(`<p class="muted">Questa lettura è generata automaticamente con metodo pitagorico semplificato.</p>`);
     return parts.join("\n");
-  };
-
-  const renderMatrix = (cnt)=>{
-    const cont = document.getElementById("matrix");
-    cont.innerHTML = "";
-    [1,2,3,4,5,6,7,8,9].forEach(d=>{
-      const el = document.createElement("div");
-      el.className = "cell";
-      el.innerHTML = `<div class="digit">${d}</div><div class="count">${cnt[d]||0}</div>`;
-      cont.appendChild(el);
-    });
   };
 
   const compute = ()=>{
@@ -323,7 +310,6 @@
 
     const matrix = countsToMatrix(dateDigits);
 
-    // Quick UI
     document.getElementById("lifePath").textContent = lifePath;
     document.getElementById("expression").textContent = expression;
     document.getElementById("soul").textContent = soul;
@@ -332,7 +318,6 @@
     document.getElementById("birthYearEssence").textContent = birthYearEssence;
     renderMatrix(matrix);
 
-    // Rich reading
     const html = buildRichReading({
       name, dateVal, keepMasters, yAsVowel,
       lifePath, expression, soul, personality, personalYear, birthYearEssence,
