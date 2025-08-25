@@ -195,7 +195,7 @@
     return x;
   };
 
-  const parseDateDigits = (value)=> value.replaceAll("-","").split("").map(d => parseInt(d)||0);
+  const parseDateDigits = (value)=> value.split("-").join("").split("").map(d => parseInt(d)||0);
 
   const countsToMatrix = (digits)=>{
     const cnt = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0};
@@ -290,7 +290,7 @@
     if(dbl(9)) strong.push("Vocazione spirituale (doppio 9)");
     const roots = [4,6].filter(has);
     if(roots.length) strong.push(`Radici pratiche (${roots.join(" e ")})`);
-    if(strong.length) bullets.push("• " + ", ".join ? ", ".join(strong) : strong.join(", ") + ".");
+    if(strong.length) bullets.push("• " + strong.join(", ") + ".");
 
     const lacks = [2,5,8].filter(n=>!has(n));
     if(lacks.length){
@@ -395,11 +395,21 @@
 
   const copyInterpretation = async ()=>{
     try{
-      const txt = window.__lastInterpretationText || document.getElementById("readingRich").innerText;
-      await navigator.clipboard.writeText(txt.trim());
+      const txt = (window.__lastInterpretationText || document.getElementById("readingRich").innerText || "").trim();
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(txt);
+      }else{
+        const ta = document.createElement("textarea");
+        ta.value = txt;
+        ta.style.position="fixed"; ta.style.opacity="0"; ta.style.left="-9999px";
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
       alert("Interpretazione copiata negli appunti.");
     }catch(e){
-      alert("Copia non riuscita: " + e);
+      alert("Copia non riuscita. Puoi selezionare e copiare manualmente il testo.");
     }
   };
 
